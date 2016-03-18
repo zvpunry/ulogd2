@@ -35,7 +35,7 @@ if test "$pg_prefix" != "no"; then
 AC_MSG_CHECKING([for PostgreSQL pg_config program])
 for d in $pg_prefix/bin /usr/bin /usr/local/bin /usr/local/pgsql/bin /opt/pgsql/bin /opt/packages/pgsql/bin
 do
-	if test -x $d/pg_config
+	if test -x $d/pg_config -a "$cross_compiling" = "no";
 	then
 		AC_MSG_RESULT(found pg_config in $d)
 		PQINCPATH=`$d/pg_config --includedir`
@@ -130,7 +130,7 @@ if test "$my_prefix" != "no"; then
 AC_MSG_CHECKING([for MySQL mysql_config program])
 for d in $my_prefix/bin /usr/bin /usr/local/bin /usr/local/mysql/bin /opt/mysql/bin /opt/packages/mysql/bin
 do
-	if test -x $d/mysql_config
+	if test -x $d/mysql_config -a "$cross_compiling" = "no";
 	then
 		AC_MSG_RESULT(found mysql_config in $d)
 		MYSQL_INC=`$d/mysql_config --include`
