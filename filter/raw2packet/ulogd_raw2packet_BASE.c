@@ -717,7 +717,7 @@ static int _interp_iphdr(struct ulogd_pluginstance *pi, uint32_t len)
 	struct ulogd_key *ret = pi->output.keys;
 	struct iphdr *iph =
 		ikey_get_ptr(&pi->input.keys[INKEY_RAW_PCKT]);
-	void *nexthdr = (uint32_t *)iph + iph->ihl;
+	void *nexthdr;
 
 	if (len < sizeof(struct iphdr) || len <= (uint32_t)(iph->ihl * 4))
 		return ULOGD_IRET_OK;
@@ -734,6 +734,7 @@ static int _interp_iphdr(struct ulogd_pluginstance *pi, uint32_t len)
 	okey_set_u16(&ret[KEY_IP_ID], ntohs(iph->id));
 	okey_set_u16(&ret[KEY_IP_FRAGOFF], ntohs(iph->frag_off));
 
+	nexthdr = (uint32_t *)iph + iph->ihl;
 	switch (iph->protocol) {
 	case IPPROTO_TCP:
 		_interp_tcp(pi, nexthdr, len);
