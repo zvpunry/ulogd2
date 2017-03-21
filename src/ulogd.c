@@ -668,7 +668,7 @@ pluginstance_alloc_init(struct ulogd_plugin *pl, char *pi_id,
 	INIT_LLIST_HEAD(&pi->plist);
 	pi->plugin = pl;
 	pi->stack = stack;
-	memcpy(pi->id, pi_id, sizeof(pi->id));
+	strncpy(pi->id, pi_id, ULOGD_MAX_KEYLEN);
 
 	ptr = (void *)pi + sizeof(*pi);
 
