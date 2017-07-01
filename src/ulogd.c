@@ -392,6 +392,7 @@ void ulogd_register_plugin(struct ulogd_plugin *me)
 	if (strcmp(me->version, VERSION)) { 
 		ulogd_log(ULOGD_NOTICE, 
 			  "plugin `%s' has incompatible version %s\n",
+			  me->name,
 			  me->version);
 		return;
 	}
