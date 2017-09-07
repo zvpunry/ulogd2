@@ -64,6 +64,7 @@
 #include <syslog.h>
 #include <sys/time.h>
 #include <sys/stat.h>
+#include <sched.h>
 #include <ulogd/conffile.h>
 #include <ulogd/ulogd.h>
 #ifdef DEBUG
@@ -1395,6 +1396,19 @@ static void signal_handler_task(int signal)
 	deliver_signal_pluginstances(signal);
 }
 
+static void set_scheduler(void)
+{
+	struct sched_param schedparam;
+	int sched_type;
+
+	schedparam.sched_priority = sched_get_priority_max(SCHED_RR);
+	sched_type = SCHED_RR;
+
+	if (sched_setscheduler(0, sched_type, &schedparam) < 0)
+		fprintf(stderr, "WARNING: scheduler configuration failed:"
+			" %s\n", strerror(errno));
+}
+
 static void print_usage(void)
 {
 	printf("ulogd Version %s\n", VERSION);
@@ -1589,6 +1603,7 @@ int main(int argc, char* argv[])
 	signal(SIGALRM, &signal_handler);
 	signal(SIGUSR1, &signal_handler);
 	signal(SIGUSR2, &signal_handler);
+	set_scheduler();
 
 	ulogd_log(ULOGD_INFO, 
 		  "initialization finished, entering main loop\n");
