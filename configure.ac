@@ -36,9 +36,6 @@ dnl Checks for library functions.
 AC_FUNC_VPRINTF
 AC_CHECK_FUNCS(socket strerror)
 
-regular_CFLAGS="-Wall -Wextra -Wno-unused-parameter"
-AC_SUBST([regular_CFLAGS])
-
 AC_SEARCH_LIBS([pthread_create], [pthread], [libpthread_LIBS="$LIBS"; LIBS=""])
 AC_SUBST([libpthread_LIBS])
 
@@ -153,6 +150,16 @@ else
 	enable_jansson="no"
 fi
 
+AC_ARG_WITH([ulogd2libdir],
+	AS_HELP_STRING([--with-ulogd2libdir=PATH],
+        [Default directory to load ulogd2 plugin from [[LIBDIR/ulogd]]]),
+        [ulogd2libdir="$withval"],
+        [ulogd2libdir="${libdir}/ulogd"])
+AC_SUBST([ulogd2libdir])
+
+regular_CFLAGS="-Wall -Wextra -Wno-unused-parameter -DULOGD2_LIBDIR=\\\"\${ulogd2libdir}\\\"";
+AC_SUBST([regular_CFLAGS])
+
 dnl AC_SUBST(DATABASE_DIR)
 dnl AC_SUBST(DATABASE_LIB)
 dnl AC_SUBST(DATABASE_LIB_DIR)
@@ -176,8 +183,25 @@ AC_CONFIG_FILES(include/Makefile include/ulogd/Makefile include/libipulog/Makefi
 	  src/Makefile Makefile Rules.make)
 AC_OUTPUT
 
+define([EXPAND_VARIABLE],
+[$2=[$]$1
+if test $prefix = 'NONE'; then
+        prefix="/usr/local"
+fi
+while true; do
+  case "[$]$2" in
+    *\[$]* ) eval "$2=[$]$2" ;;
+    *) break ;;
+  esac
+done
+eval "$2=[$]$2"
+])dnl EXPAND_VARIABLE
+
+EXPAND_VARIABLE(ulogd2libdir, e_ulogd2libdir)
+
 echo "
 Ulogd configuration:
+  Default plugins directory:		${e_ulogd2libdir}
   Input plugins:
     NFLOG plugin:			${enable_nflog}
     NFCT plugin:			${enable_nfct}

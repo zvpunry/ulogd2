@@ -20,35 +20,36 @@ logfile="/var/log/ulogd.log"
 # We have to configure and load all the plugins we want to use
 
 # general rules:
+#
+# 0. don't specify any plugin for ulogd to load them all
 # 1. load the plugins _first_ from the global section
 # 2. options for each plugin in seperate section below
 
-
-plugin="@pkglibdir@/ulogd_inppkt_NFLOG.so"
+#plugin="@pkglibdir@/ulogd_inppkt_NFLOG.so"
 #plugin="@pkglibdir@/ulogd_inppkt_ULOG.so"
 #plugin="@pkglibdir@/ulogd_inppkt_UNIXSOCK.so"
-plugin="@pkglibdir@/ulogd_inpflow_NFCT.so"
-plugin="@pkglibdir@/ulogd_filter_IFINDEX.so"
-plugin="@pkglibdir@/ulogd_filter_IP2STR.so"
-plugin="@pkglibdir@/ulogd_filter_IP2BIN.so"
+#plugin="@pkglibdir@/ulogd_inpflow_NFCT.so"
+#plugin="@pkglibdir@/ulogd_filter_IFINDEX.so"
+#plugin="@pkglibdir@/ulogd_filter_IP2STR.so"
+#plugin="@pkglibdir@/ulogd_filter_IP2BIN.so"
 #plugin="@pkglibdir@/ulogd_filter_IP2HBIN.so"
-plugin="@pkglibdir@/ulogd_filter_PRINTPKT.so"
-plugin="@pkglibdir@/ulogd_filter_HWHDR.so"
-plugin="@pkglibdir@/ulogd_filter_PRINTFLOW.so"
+#plugin="@pkglibdir@/ulogd_filter_PRINTPKT.so"
+#plugin="@pkglibdir@/ulogd_filter_HWHDR.so"
+#plugin="@pkglibdir@/ulogd_filter_PRINTFLOW.so"
 #plugin="@pkglibdir@/ulogd_filter_MARK.so"
-plugin="@pkglibdir@/ulogd_output_LOGEMU.so"
-plugin="@pkglibdir@/ulogd_output_SYSLOG.so"
-plugin="@pkglibdir@/ulogd_output_XML.so"
+#plugin="@pkglibdir@/ulogd_output_LOGEMU.so"
+#plugin="@pkglibdir@/ulogd_output_SYSLOG.so"
+#plugin="@pkglibdir@/ulogd_output_XML.so"
 #plugin="@pkglibdir@/ulogd_output_SQLITE3.so"
-plugin="@pkglibdir@/ulogd_output_GPRINT.so"
+#plugin="@pkglibdir@/ulogd_output_GPRINT.so"
 #plugin="@pkglibdir@/ulogd_output_NACCT.so"
 #plugin="@pkglibdir@/ulogd_output_PCAP.so"
 #plugin="@pkglibdir@/ulogd_output_PGSQL.so"
 #plugin="@pkglibdir@/ulogd_output_MYSQL.so"
 #plugin="@pkglibdir@/ulogd_output_DBI.so"
-plugin="@pkglibdir@/ulogd_raw2packet_BASE.so"
-plugin="@pkglibdir@/ulogd_inpflow_NFACCT.so"
-plugin="@pkglibdir@/ulogd_output_GRAPHITE.so"
+#plugin="@pkglibdir@/ulogd_raw2packet_BASE.so"
+#plugin="@pkglibdir@/ulogd_inpflow_NFACCT.so"
+#plugin="@pkglibdir@/ulogd_output_GRAPHITE.so"
 #plugin="@pkglibdir@/ulogd_output_JSON.so"
 
 # this is a stack for logging packet send by system via LOGEMU

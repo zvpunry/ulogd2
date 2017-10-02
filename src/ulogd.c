@@ -404,7 +404,7 @@ void ulogd_register_plugin(struct ulogd_plugin *me)
 				  me->name);
 			exit(EXIT_FAILURE);
 		}
-		ulogd_log(ULOGD_DEBUG, "registering plugin `%s'\n", me->name);
+		ulogd_log(ULOGD_NOTICE, "registering plugin `%s'\n", me->name);
 		llist_add(&me->list, &ulogd_plugins);
 	} else {
 		get_plugin_infos(me);
@@ -728,6 +728,41 @@ static int load_plugin(const char *file)
 	return 0;
 }
 
+static int load_all_plugins(void)
+{
+	DIR *d;
+	struct dirent *dent;
+	char path[PATH_MAX];
+
+	d = opendir(ULOGD2_LIBDIR);
+	if (d == NULL) {
+		ulogd_log(ULOGD_ERROR, "load_all_plugins: opendir(%s): %s\n",
+			  ULOGD2_LIBDIR, strerror(errno));
+		return -1;
+	}
+
+	ulogd_log(ULOGD_NOTICE, "loading all plugins at %s\n", ULOGD2_LIBDIR);
+
+	while ((dent = readdir(d)) != NULL) {
+		if (strcmp(dent->d_name, ".") == 0 ||
+		    strcmp(dent->d_name, "..") == 0)
+			continue;
+
+		int len = strlen(dent->d_name);
+		if (len < 3)
+			continue;
+
+		if (strcmp(&dent->d_name[len - 3], ".so") != 0)
+			continue;
+
+		snprintf(path, sizeof(path), "%s/%s", ULOGD2_LIBDIR,
+			 dent->d_name);
+		if (load_plugin(path) != 0)
+			return -1;
+	}
+	return 0;
+}
+
 /* find an output key in a given stack, starting at 'start' */
 static struct ulogd_key *
 find_okey_in_stack(char *name,
@@ -924,6 +959,9 @@ static int create_stack(const char *option)
 	char *buf = strdup(option);
 	char *tok;
 	int ret;
+
+	if (llist_empty(&ulogd_plugins_handle))
+		load_all_plugins();
 
 	if (!buf) {
 		ulogd_log(ULOGD_ERROR, "");
