@@ -213,6 +213,17 @@ sync=1
 # Uncomment the following line to use JSON v1 event format that
 # can provide better compatility with some JSON file reader.
 #eventv1=1
+# Uncomment the following lines to send the JSON logs to a remote host via UDP
+#mode="udp"
+#host="192.0.2.10"
+#port="10210"
+# Uncomment the following lines to send the JSON logs to a remote host via TCP
+#mode="tcp"
+#host="192.0.2.10"
+#port="10210"
+# Uncomment the following lines to send the JSON logs to a local unix socket
+#mode="unix"
+#file="/var/run/ulogd.socket"
 
 [pcap1]
 #default file is /var/log/ulogd.pcap
