@@ -3,6 +3,9 @@
  *
  * ulogd IPFIX Exporter plugin.
  *
+ * (C) 2009 by Holger Eitzenberger <holger@eitzenberger.org>, Astaro AG
+ * (C) 2019 by Ander Juaristi <a@juaristi.eus>
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -11,8 +14,6 @@
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
- * Holger Eitzenberger <holger@eitzenberger.org>  Astaro AG 2009
  */
 #include <unistd.h>
 #include <time.h>
@@ -28,6 +29,7 @@
 #define DEFAULT_MTU		512 /* RFC 5101, 10.3.3 */
 #define DEFAULT_PORT		4739 /* RFC 5101, 10.3.4 */
 #define DEFAULT_SPORT		4740
+#define DEFAULT_SEND_TEMPLATE	"once"
 
 enum {
 	OID_CE = 0,
@@ -35,16 +37,18 @@ enum {
 	PORT_CE,
 	PROTO_CE,
 	MTU_CE,
+	SEND_TEMPLATE_CE
 };
 
-#define oid_ce(x)	(x->ces[OID_CE])
-#define host_ce(x)	(x->ces[HOST_CE])
-#define port_ce(x)	(x->ces[PORT_CE])
-#define proto_ce(x)	(x->ces[PROTO_CE])
-#define mtu_ce(x)	(x->ces[MTU_CE])
+#define oid_ce(x)		(x->ces[OID_CE])
+#define host_ce(x)		(x->ces[HOST_CE])
+#define port_ce(x)		(x->ces[PORT_CE])
+#define proto_ce(x)		(x->ces[PROTO_CE])
+#define mtu_ce(x)		(x->ces[MTU_CE])
+#define send_template_ce(x)	(x->ces[SEND_TEMPLATE_CE])
 
 static const struct config_keyset ipfix_kset = {
-	.num_ces = 5,
+	.num_ces = 6,
 	.ces = {
 		{
 			.key = "oid",
@@ -70,12 +74,13 @@ static const struct config_keyset ipfix_kset = {
 			.key = "mtu",
 			.type = CONFIG_TYPE_INT,
 			.u.value = DEFAULT_MTU
+		},
+		{
+			.key = "send_template",
+			.type = CONFIG_TYPE_STRING,
+			.u.string = DEFAULT_SEND_TEMPLATE
 		}
 	}
-};
-
-struct ipfix_templ {
-	struct ipfix_templ *next;
 };
 
 struct ipfix_priv {
@@ -83,7 +88,7 @@ struct ipfix_priv {
 	uint32_t seqno;
 	struct ipfix_msg *msg;		/* current message */
 	struct llist_head list;
-	struct ipfix_templ *templates;
+	int tid;
 	int proto;
 	struct ulogd_timer timer;
 	struct sockaddr_in sa;
@@ -258,8 +263,8 @@ static void ipfix_timer_cb(struct ulogd_timer *t, void *data)
 static int ipfix_configure(struct ulogd_pluginstance *pi, struct ulogd_pluginstance_stack *stack)
 {
 	struct ipfix_priv *priv = (struct ipfix_priv *) &pi->private;
+	char *host, *proto, *send_template;
 	int oid, port, mtu, ret;
-	char *host, *proto;
 	char addr[16];
 
 	ret = config_parse_file(pi->id, pi->config_kset);
@@ -271,6 +276,7 @@ static int ipfix_configure(struct ulogd_pluginstance *pi, struct ulogd_pluginsta
 	port = port_ce(pi->config_kset).u.value;
 	proto = proto_ce(pi->config_kset).u.string;
 	mtu = mtu_ce(pi->config_kset).u.value;
+	send_template = send_template_ce(pi->config_kset).u.string;
 
 	if (!oid) {
 		ulogd_log(ULOGD_FATAL, "invalid Observation ID\n");
@@ -302,6 +308,8 @@ static int ipfix_configure(struct ulogd_pluginstance *pi, struct ulogd_pluginsta
 	INIT_LLIST_HEAD(&priv->list);
 
 	ulogd_init_timer(&priv->timer, pi, ipfix_timer_cb);
+
+	priv->tid = (strcmp(send_template, "never") ? VY_IPFIX_SID : -1);
 
 	ulogd_log(ULOGD_INFO, "using IPFIX Collector at %s:%d (MTU %d)\n",
 		  inet_ntop(AF_INET, &priv->sa.sin_addr, addr, sizeof(addr)),
@@ -410,25 +418,30 @@ static int ipfix_stop(struct ulogd_pluginstance *pi)
 static int ipfix_interp(struct ulogd_pluginstance *pi)
 {
 	struct ipfix_priv *priv = (struct ipfix_priv *) &pi->private;
+	char saddr[16], daddr[16], *send_template;
 	struct vy_ipfix_data *data;
 	int oid, mtu, ret;
-	char addr[16];
 
 	if (!(GET_FLAGS(pi->input.keys, InIpSaddr) & ULOGD_RETF_VALID))
 		return ULOGD_IRET_OK;
 
 	oid = oid_ce(pi->config_kset).u.value;
 	mtu = mtu_ce(pi->config_kset).u.value;
+	send_template = send_template_ce(pi->config_kset).u.string;
 
 again:
 	if (!priv->msg) {
-		priv->msg = ipfix_msg_alloc(mtu, oid);
+		priv->msg = ipfix_msg_alloc(mtu, oid, priv->tid);
 		if (!priv->msg) {
 			/* just drop this flow */
 			ulogd_log(ULOGD_ERROR, "out of memory, dropping flow\n");
 			return ULOGD_IRET_OK;
 		}
 		ipfix_msg_add_set(priv->msg, VY_IPFIX_SID);
+
+		/* template sent - do not send it again the next time */
+		if (priv->tid == VY_IPFIX_SID && strcmp(send_template, "once") == 0)
+			priv->tid = -1;
 	}
 
 	data = ipfix_msg_add_data(priv->msg, sizeof(struct vy_ipfix_data));
@@ -438,8 +451,6 @@ again:
 		/* can't loop because the next will definitely succeed */
 		goto again;
 	}
-
-	data->ifi_in = data->ifi_out = 0;
 
 	data->saddr.s_addr = ikey_get_u32(&pi->input.keys[InIpSaddr]);
 	data->daddr.s_addr = ikey_get_u32(&pi->input.keys[InIpDaddr]);
@@ -462,13 +473,12 @@ again:
 		data->aid = htonl(ikey_get_u32(&pi->input.keys[InCtMark]));
 
 	data->l4_proto = ikey_get_u8(&pi->input.keys[InIpProto]);
-	data->__padding = 0;
 
 	ulogd_log(ULOGD_DEBUG, "Got new packet (packets = %u, bytes = %u, flow = (%u, %u), saddr = %s, daddr = %s, sport = %u, dport = %u)\n",
-			ntohl(data->packets), ntohl(data->bytes), ntohl(data->start), ntohl(data->end),
-			inet_ntop(AF_INET, &data->saddr.s_addr, addr, sizeof(addr)),
-			inet_ntop(AF_INET, &data->daddr.s_addr, addr, sizeof(addr)),
-			ntohs(data->sport), ntohs(data->dport));
+		  ntohl(data->packets), ntohl(data->bytes), ntohl(data->start), ntohl(data->end),
+		  inet_ntop(AF_INET, &data->saddr.s_addr, saddr, sizeof(saddr)),
+		  inet_ntop(AF_INET, &data->daddr.s_addr, daddr, sizeof(daddr)),
+		  ntohs(data->sport), ntohs(data->dport));
 
 	if ((ret = send_msgs(pi)) < 0)
 		return ret;

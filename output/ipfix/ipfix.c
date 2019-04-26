@@ -2,6 +2,7 @@
  * ipfix.c
  *
  * Holger Eitzenberger, 2009.
+ * Ander Juaristi, 2019
  */
 
 /* These forward declarations are needed since ulogd.h doesn't like to be the first */
@@ -13,24 +14,106 @@
 
 #include <ulogd/ulogd.h>
 #include <ulogd/common.h>
+#include <ulogd/ipfix_protocol.h>
 
-struct ipfix_msg *ipfix_msg_alloc(size_t len, uint32_t oid)
+struct ipfix_templ_elem {
+	uint16_t id;
+	uint16_t len;
+};
+
+struct ipfix_templ {
+	unsigned int num_templ_elements;
+	struct ipfix_templ_elem templ_elements[];
+};
+
+/* Template fields modeled after vy_ipfix_data */
+static const struct ipfix_templ template = {
+	.num_templ_elements = 10,
+	.templ_elements = {
+		{
+			.id = IPFIX_sourceIPv4Address,
+			.len = sizeof(uint32_t)
+		},
+		{
+			.id = IPFIX_destinationIPv4Address,
+			.len = sizeof(uint32_t)
+		},
+		{
+			.id = IPFIX_packetTotalCount,
+			.len = sizeof(uint32_t)
+		},
+		{
+			.id = IPFIX_octetTotalCount,
+			.len = sizeof(uint32_t)
+		},
+		{
+			.id = IPFIX_flowStartSeconds,
+			.len = sizeof(uint32_t)
+		},
+		{
+			.id = IPFIX_flowEndSeconds,
+			.len = sizeof(uint32_t)
+		},
+		{
+			.id = IPFIX_sourceTransportPort,
+			.len = sizeof(uint16_t)
+		},
+		{
+			.id = IPFIX_destinationTransportPort,
+			.len = sizeof(uint16_t)
+		},
+		{
+			.id = IPFIX_protocolIdentifier,
+			.len = sizeof(uint8_t)
+		},
+		{
+			.id = IPFIX_applicationId,
+			.len = sizeof(uint32_t)
+		}
+	}
+};
+
+struct ipfix_msg *ipfix_msg_alloc(size_t len, uint32_t oid, int tid)
 {
 	struct ipfix_msg *msg;
 	struct ipfix_hdr *hdr;
+	struct ipfix_templ_hdr *templ_hdr;
+	struct ipfix_templ_elem *elem;
+	unsigned int i = 0;
 
-	if (len < IPFIX_HDRLEN + IPFIX_SET_HDRLEN)
+	if ((tid > 0 && len < IPFIX_HDRLEN + IPFIX_TEMPL_HDRLEN(template.num_templ_elements) + IPFIX_SET_HDRLEN) ||
+	    (len < IPFIX_HDRLEN + IPFIX_SET_HDRLEN))
 		return NULL;
 
 	msg = malloc(sizeof(struct ipfix_msg) + len);
 	memset(msg, 0, sizeof(struct ipfix_msg));
-	msg->tail = msg->data + IPFIX_HDRLEN;
+	msg->tid = tid;
 	msg->end = msg->data + len;
+	msg->tail = msg->data + IPFIX_HDRLEN;
+	if (tid > 0)
+		msg->tail += IPFIX_TEMPL_HDRLEN(template.num_templ_elements);
 
+	/* Initialize message header */
 	hdr = ipfix_msg_hdr(msg);
 	memset(hdr, 0, IPFIX_HDRLEN);
 	hdr->version = htons(IPFIX_VERSION);
 	hdr->oid = htonl(oid);
+
+	if (tid > 0) {
+		/* Initialize template record header */
+		templ_hdr = ipfix_msg_templ_hdr(msg);
+		templ_hdr->sid = htons(2);
+		templ_hdr->tid = htons(tid);
+		templ_hdr->len = htons(IPFIX_TEMPL_HDRLEN(template.num_templ_elements));
+		templ_hdr->cnt = htons(template.num_templ_elements);
+
+		while (i < template.num_templ_elements) {
+			elem = (struct ipfix_templ_elem *) &templ_hdr->data[i * 4];
+			elem->id = htons(template.templ_elements[i].id);
+			elem->len = htons(template.templ_elements[i].len);
+			i++;
+		}
+	}
 
 	return msg;
 }
@@ -45,6 +128,14 @@ void ipfix_msg_free(struct ipfix_msg *msg)
 			msg->nrecs);
 
 	free(msg);
+}
+
+struct ipfix_templ_hdr *ipfix_msg_templ_hdr(const struct ipfix_msg *msg)
+{
+	if (msg->tid > 0)
+		return (struct ipfix_templ_hdr *) (msg->data + IPFIX_HDRLEN);
+
+	return NULL;
 }
 
 struct ipfix_hdr *ipfix_msg_hdr(const struct ipfix_msg *msg)

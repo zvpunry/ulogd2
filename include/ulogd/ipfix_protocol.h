@@ -129,6 +129,7 @@ enum {
 	/* reserved */
 	IPFIX_fragmentOffsetIPv4	= 88,
 	/* reserved */
+	IPFIX_applicationId		= 95,
 	IPFIX_bgpNextAdjacentAsNumber	= 128,
 	IPFIX_bgpPrevAdjacentAsNumber	= 129,
 	IPFIX_exporterIPv4Address	= 130,
