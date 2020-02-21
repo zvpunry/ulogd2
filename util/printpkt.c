@@ -355,6 +355,9 @@ static int printpkt_ipv6(struct ulogd_key *res, char *buf)
 			break;
 		}
 		break;
+	default:
+		buf_cur += sprintf(buf_cur, "PROTO=%u ",
+				   ikey_get_u8(&res[KEY_IP6_NEXTHDR]));
 	}
 
 	return buf_cur - buf;
