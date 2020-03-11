@@ -128,6 +128,8 @@ enum nflog_keys {
 	NFLOG_KEY_OOB_MARK,
 	NFLOG_KEY_OOB_IFINDEX_IN,
 	NFLOG_KEY_OOB_IFINDEX_OUT,
+	NFLOG_KEY_OOB_PHYSIFINDEX_IN,
+	NFLOG_KEY_OOB_PHYSIFINDEX_OUT,
 	NFLOG_KEY_OOB_HOOK,
 	NFLOG_KEY_RAW_MAC_LEN,
 	NFLOG_KEY_OOB_SEQ_LOCAL,
@@ -239,6 +241,24 @@ static struct ulogd_key output_keys[] = {
 			.field_id = IPFIX_egressInterface,
 		},
 	},
+	[NFLOG_KEY_OOB_PHYSIFINDEX_IN] = {
+		.type = ULOGD_RET_UINT32,
+		.flags = ULOGD_RETF_NONE,
+		.name = "oob.physifindex_in",
+		.ipfix = {
+			.vendor = IPFIX_VENDOR_IETF,
+			.field_id = IPFIX_ingressInterface,
+		},
+	},
+	[NFLOG_KEY_OOB_PHYSIFINDEX_OUT] = {
+		.type = ULOGD_RET_UINT32,
+		.flags = ULOGD_RETF_NONE,
+		.name = "oob.physifindex_out",
+		.ipfix = {
+			.vendor = IPFIX_VENDOR_IETF,
+			.field_id = IPFIX_egressInterface,
+		},
+	},
 	[NFLOG_KEY_OOB_HOOK] = {
 		.type = ULOGD_RET_UINT8,
 		.flags = ULOGD_RETF_NONE,
@@ -329,6 +349,8 @@ interp_packet(struct ulogd_pluginstance *upi, uint8_t pf_family,
 	uint32_t mark = nflog_get_nfmark(ldata);
 	uint32_t indev = nflog_get_indev(ldata);
 	uint32_t outdev = nflog_get_outdev(ldata);
+	uint32_t physindev = nflog_get_physindev(ldata);
+	uint32_t physoutdev = nflog_get_physoutdev(ldata);
 	uint32_t seq;
 	uint32_t uid;
 	uint32_t gid;
@@ -385,6 +407,12 @@ interp_packet(struct ulogd_pluginstance *upi, uint8_t pf_family,
 
 	if (outdev > 0)
 		okey_set_u32(&ret[NFLOG_KEY_OOB_IFINDEX_OUT], outdev);
+
+	if (physindev > 0)
+		okey_set_u32(&ret[NFLOG_KEY_OOB_PHYSIFINDEX_IN], physindev);
+
+	if (physoutdev > 0)
+		okey_set_u32(&ret[NFLOG_KEY_OOB_PHYSIFINDEX_OUT], physoutdev);
 
 	if (nflog_get_uid(ldata, &uid) == 0)
 		okey_set_u32(&ret[NFLOG_KEY_OOB_UID], uid);

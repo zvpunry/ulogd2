@@ -38,6 +38,18 @@ static struct ulogd_key ifindex_keys[] = {
 		.flags = ULOGD_RETF_NONE,
 		.name = "oob.out", 
 	},
+	{
+		.type = ULOGD_RET_STRING,
+		.len = IFNAMSIZ,
+		.flags = ULOGD_RETF_NONE,
+		.name = "oob.physin",
+	},
+	{
+		.type = ULOGD_RET_STRING,
+		.len = IFNAMSIZ,
+		.flags = ULOGD_RETF_NONE,
+		.name = "oob.physout",
+	},
 };
 
 static struct ulogd_key ifindex_inp[] = {
@@ -48,6 +60,14 @@ static struct ulogd_key ifindex_inp[] = {
 	{
 		.type = ULOGD_RET_UINT32,
 		.name = "oob.ifindex_out",
+	},
+	{
+		.type = ULOGD_RET_UINT32,
+		.name = "oob.physifindex_in",
+	},
+	{
+		.type = ULOGD_RET_UINT32,
+		.name = "oob.physifindex_out",
 	},
 };
 
@@ -64,6 +84,8 @@ static int interp_ifindex(struct ulogd_pluginstance *pi)
 	struct ulogd_key *inp = pi->input.keys;
 	static char indev[IFNAMSIZ];
 	static char outdev[IFNAMSIZ];
+	static char physindev[IFNAMSIZ];
+	static char physoutdev[IFNAMSIZ];
 
 	nlif_index2name(nlif_inst, ikey_get_u32(&inp[0]), indev);
 	if (indev[0] == '*')
@@ -74,6 +96,16 @@ static int interp_ifindex(struct ulogd_pluginstance *pi)
 	if (outdev[0] == '*')
 		outdev[0] = 0;
 	okey_set_ptr(&ret[1], outdev);
+
+	nlif_index2name(nlif_inst, ikey_get_u32(&inp[2]), physindev);
+	if (physindev[0] == '*')
+		physindev[0] = 0;
+	okey_set_ptr(&ret[2], physindev);
+
+	nlif_index2name(nlif_inst, ikey_get_u32(&inp[3]), physoutdev);
+	if (physoutdev[0] == '*')
+		physoutdev[0] = 0;
+	okey_set_ptr(&ret[3], physoutdev);
 
 	return ULOGD_IRET_OK;
 }

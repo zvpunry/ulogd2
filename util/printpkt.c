@@ -42,6 +42,8 @@ struct ulogd_key printpkt_keys[] = {
 	[KEY_OOB_PREFIX]	= { .name = "oob.prefix", },
 	[KEY_OOB_IN]		= { .name = "oob.in", },
 	[KEY_OOB_OUT]		= { .name = "oob.out", },
+	[KEY_OOB_PHYSIN]	= { .name = "oob.physin", },
+	[KEY_OOB_PHYSOUT]	= { .name = "oob.physout", },
 	[KEY_OOB_UID]		= { .name = "oob.uid",
 				    .flags = ULOGD_KEYF_OPTIONAL
 				  },
@@ -442,6 +444,14 @@ int printpkt_print(struct ulogd_key *res, char *buf)
 		buf_cur += sprintf(buf_cur, "IN=%s OUT=%s ", 
 				   (char *) ikey_get_ptr(&res[KEY_OOB_IN]), 
 				   (char *) ikey_get_ptr(&res[KEY_OOB_OUT]));
+
+	if (pp_is_valid(res, KEY_OOB_PHYSIN))
+		buf_cur += sprintf(buf_cur, "PHYSIN=%s ",
+				(char *) ikey_get_ptr(&res[KEY_OOB_PHYSIN]));
+
+	if (pp_is_valid(res, KEY_OOB_PHYSOUT))
+		buf_cur += sprintf(buf_cur, "PHYSOUT=%s ",
+				(char *) ikey_get_ptr(&res[KEY_OOB_PHYSOUT]));
 
 	/* FIXME: configurable */
 	if (pp_is_valid(res, KEY_RAW_MAC)) {
