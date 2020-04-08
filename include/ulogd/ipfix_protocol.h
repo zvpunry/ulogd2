@@ -217,6 +217,8 @@ enum {
 	/* reserved */
 	IPFIX_headerLengthIPv4		= 213,
 	IPFIX_mplsPayloadLength		= 214,
+	IPFIX_ingressPhysicalInterface	= 252,
+	IPFIX_egressPhysicalInterface	= 253,
 };
 
 /* Information elements of the netfilter vendor id */

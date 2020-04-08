@@ -247,7 +247,7 @@ static struct ulogd_key output_keys[] = {
 		.name = "oob.physifindex_in",
 		.ipfix = {
 			.vendor = IPFIX_VENDOR_IETF,
-			.field_id = IPFIX_ingressInterface,
+			.field_id = IPFIX_ingressPhysicalInterface,
 		},
 	},
 	[NFLOG_KEY_OOB_PHYSIFINDEX_OUT] = {
@@ -256,7 +256,7 @@ static struct ulogd_key output_keys[] = {
 		.name = "oob.physifindex_out",
 		.ipfix = {
 			.vendor = IPFIX_VENDOR_IETF,
-			.field_id = IPFIX_egressInterface,
+			.field_id = IPFIX_egressPhysicalInterface,
 		},
 	},
 	[NFLOG_KEY_OOB_HOOK] = {
